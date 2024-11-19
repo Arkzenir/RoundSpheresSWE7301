@@ -1,0 +1,21 @@
+# swagger.yml
+
+openapi: 3.0.0
+info:
+  title: "Scientific Flask REST API"
+  description: "An API for interacting with the scientific database"
+  version: "1.0.0"
+
+servers:
+  - url: "/api"
+
+paths:
+  /sci_record:
+    get:
+      operationId: "sci_record.read_all"
+      tags:
+        - "sci"
+      summary: "Get all scientific data"
+      responses:
+        "200":
+          description: "Successfully read scientific record table"
