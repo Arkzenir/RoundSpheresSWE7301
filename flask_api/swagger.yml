@@ -9,13 +9,84 @@ info:
 servers:
   - url: "/api"
 
+components:
+  schemas:
+    Sci:
+      type: "object"
+      required:
+        - "id"
+      properties:
+        id:
+          type: "integer"
+  parameters:
+    id:
+      name: "id"
+      description: "Unique id of the record to get"
+      in: path
+      required: True
+      schema:
+        type: "integer"
+
 paths:
   /sci_record:
     get:
       operationId: "sci_record.read_all"
       tags:
-        - "sci"
+        - Sci
       summary: "Get all scientific data"
       responses:
         "200":
           description: "Successfully read scientific record table"
+    post:
+      operationId: "sci_record.create"
+      tags:
+        - Sci
+      summary: "Create a scientific record"
+      requestBody:
+          description: "Record to create"
+          required: True
+          content:
+            application/json:
+              schema:
+                x-body-name: "sci_record"
+                $ref: "#/components/schemas/Sci"
+      responses:
+        "201":
+          description: "Successfully created record"
+  /sci_record/{id}:
+    get:
+      operationId: "sci_record.read_one"
+      tags:
+        - Sci
+      summary: "Read one record"
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: "Successfully read record with id"
+    put:
+      tags:
+        - Sci
+      operationId: "sci_record.update"
+      summary: "Update a record"
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "200":
+          description: "Successfully updated record"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              x-body-name: "sci_record"
+              $ref: "#/components/schemas/Sci"
+    delete:
+      tags:
+        - Sci
+      operationId: "sci_record.delete"
+      summary: "Delete a record"
+      parameters:
+        - $ref: "#/components/parameters/id"
+      responses:
+        "204":
+          description: "Successfully deleted record"
