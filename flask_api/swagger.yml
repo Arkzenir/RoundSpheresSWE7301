@@ -18,6 +18,32 @@ components:
       properties:
         id:
           type: "integer"
+        date:
+          type: "string"
+        time:
+          type: "string"
+        time_offset:
+          type: "integer"
+        coordinate: 
+          type: "array"
+          items:
+            type: "number"
+        air_tempature:
+          type: "number"
+        humidity:
+          type: "number"
+        wind_speed:
+          type: "number"
+        wind_direction:
+          type: "number"
+        precipitation:
+          type: "number"
+        haze:
+          type: "number"
+        water_tempature:
+          type: "number"
+        notes:
+          type: "string"
   parameters:
     id:
       name: "id"

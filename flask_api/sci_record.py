@@ -8,10 +8,38 @@ def get_timestamp():
     return datetime.now().strftime(("%Y-%m-%d %H:%M:%S"))
 
 SCI_RECORD = {
-    "Temp":{
+    0:{
         "id": 0,
+        "date": "01-01-1970",
+        "time": "00.00",
+        "time_offset": 0,
+        "coordinate": [0.0,0.0],
+        "air_tempature": 0.0,
+        "humidity": 0.0,
+        "wind_speed": 0.0,
+        "wind_direction": 0.0,
+        "precipitation": 0.0,
+        "haze": 0.0,
+        "water_tempature": 0.0,
+        "notes": "",
         "timestamp": get_timestamp(),
-    }
+    },
+    1:{
+        "id": 1,
+        "date": "09-11-2001",
+        "time": "09.03",
+        "time_offset": -5,
+        "coordinate": [40.7128,74.0060],
+        "air_tempature": 20.0,
+        "humidity": 1021,
+        "wind_speed": 9.36,
+        "wind_direction": 320.15,
+        "precipitation": 29.5,
+        "haze": 11.9,
+        "water_tempature": 13.15,
+        "notes": "Specific date, time, coord etc.",
+        "timestamp": get_timestamp(),
+    },
 }
 
 def read_all():
