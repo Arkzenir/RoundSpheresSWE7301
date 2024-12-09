@@ -2,7 +2,8 @@
 
 from datetime import datetime
 from flask import abort, make_response
-
+from flask import jsonify, request
+from django_api.api.models import SciRecord
 
 def get_timestamp():
     return datetime.now().strftime(("%Y-%m-%d %H:%M:%S"))
@@ -42,8 +43,12 @@ SCI_RECORD = {
     },
 }
 
+#def read_all():
+#    return list(SCI_RECORD.values())
+
 def read_all():
-    return list(SCI_RECORD.values())
+    records = SciRecord.objects.all()
+    return jsonify(list(records))
 
 def create(record):
     id = record.get("id")
