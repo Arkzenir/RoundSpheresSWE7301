@@ -2,6 +2,11 @@
 from flask import render_template # Remove: import Flask
 import connexion
 
+from django_api.init_django import init
+init()
+
+from django_api.api.models import SciRecord
+
 app = connexion.App(__name__, specification_dir="./")
 
 app.add_api("swagger.yml")

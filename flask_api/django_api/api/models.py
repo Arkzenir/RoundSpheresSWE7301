@@ -1,7 +1,7 @@
 from django.db import models
 
 # Create your models here.
-class Item(models.Model):
+class SciRecord(models.Model):
     id = models.IntegerField
     date = models.DateField
     time = models.TimeField
