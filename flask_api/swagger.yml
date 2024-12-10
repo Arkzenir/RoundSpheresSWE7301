@@ -28,7 +28,7 @@ components:
           type: "array"
           items:
             type: "number"
-        air_tempature:
+        air_temperature:
           type: "number"
         humidity:
           type: "number"
@@ -40,7 +40,7 @@ components:
           type: "number"
         haze:
           type: "number"
-        water_tempature:
+        water_temperature:
           type: "number"
         notes:
           type: "string"
