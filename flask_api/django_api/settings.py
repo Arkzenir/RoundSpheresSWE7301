@@ -37,7 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_api.api',
+    'django_api',
 ]
 
 MIDDLEWARE = [
@@ -50,7 +50,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'django_base.urls'
+ROOT_URLCONF = 'django_api.urls'
 
 TEMPLATES = [
     {
@@ -68,7 +68,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'django_base.wsgi.application'
+WSGI_APPLICATION = 'django_api.wsgi.application'
 
 
 # Database
@@ -77,9 +77,9 @@ WSGI_APPLICATION = 'django_base.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME':  'api_db',
-        'USER': 'root',
-        'PASSWORD': '',
+        'NAME':  'roundspheres_api',
+        'USER': 'RoundSpheres',
+        'PASSWORD': 'Round_12345',
         'HOST':'localhost',
         'PORT':'3306',
     }
