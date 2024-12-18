@@ -13,11 +13,10 @@ components:
   schemas:
     Sci:
       type: "object"
-      required:
-        - "id"
       properties:
         id:
           type: "integer"
+          nullable: true  # optional in POST requests.
         date:
           type: "string"
         time:
@@ -79,6 +78,15 @@ paths:
       responses:
         "201":
           description: "Successfully created record"
+    delete:
+      operationId: "sci_record.delete_all"
+      tags:
+        - Sci
+      summary: "Delete all records"
+      description: "Deletes all scientific records in the database"
+      responses:
+        "204":
+          description: "Successfully deleted all records"
   /sci_record/{id}:
     get:
       operationId: "sci_record.read_one"

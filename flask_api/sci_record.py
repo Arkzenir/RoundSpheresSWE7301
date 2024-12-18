@@ -1,9 +1,12 @@
 # sci_record.py
 
 from datetime import datetime
-from flask import abort, make_response
-from flask import jsonify, request
+from flask import jsonify, make_response, request
 from django_api.api.models import SciRecord
+from django_api.api.serializers import SciRecordSerializer
+from rest_framework import status
+from django.core.exceptions import ObjectDoesNotExist
+from django.db import IntegrityError
 
 def get_timestamp():
     return datetime.now().strftime(("%Y-%m-%d %H:%M:%S"))
@@ -12,8 +15,8 @@ def get_timestamp():
 SCI_RECORD = {
     0:{
         "id": 0,
-        "date": "01-01-1970",
-        "time": "00.00",
+        "date": "1970-01-01",
+        "time": "00:00",
         "time_offset": 0,
         "coordinate": [0.0,0.0],
         "air_tempature": 0.0,
@@ -43,140 +46,93 @@ SCI_RECORD = {
         "timestamp": get_timestamp(),
     },
 }
-
-"""
-def read_all():
-    return list(SCI_RECORD.values())
-"""
-
+# Function to return all records
 def read_all():
     records = SciRecord.objects.all()
-    return jsonify(list(records))
-"""
-def create(record):
-    id = record.get("id")
+    serializer = SciRecordSerializer(records, many=True)
+    return jsonify(serializer.data)  # Use Flask's jsonify
 
-    if id and id not in id:
-        SCI_RECORD[id] = {
-            "id": id,
-            "timestamp": get_timestamp(),
-        }
-        return SCI_RECORD[id], 201
-
-    else:
-        abort(
-            406,
-            f"Scientific record with id {id} already exists",
-        )
-"""
-def create(record):
-    try:
-        new_record = SciRecord.objects.create(
-            id=record.get("id"),
-            date=record.get("date"),
-            time=record.get("time"),
-            time_offset=record.get("time_offset"),
-            coordinate=record.get("coordinate"),
-            air_tempature=record.get("air_tempature"),
-            humidity=record.get("humidity"),
-            wind_speed=record.get("wind_speed"),
-            wind_direction=record.get("wind_direction"),
-            precipitation=record.get("precipitation"),
-            haze=record.get("haze"),
-            water_tempature=record.get("water_tempature"),
-            notes=record.get("notes"),
-        )
-        return {"id": new_record.id}, 201
-    except Exception as e:
-        abort(400, f"Error creating record: {str(e)}")
-
-"""
-def read_one(id):
-    if id in SCI_RECORD:
-        return SCI_RECORD[id]
-    else:
-        abort(
-            404,
-            f"Record with id {id} not found"
-        )
-"""
+# Function to return one record by id
 def read_one(id):
     try:
         record = SciRecord.objects.get(pk=id)
-        return {
-            "id": record.id,
-            "date": record.date,
-            "time": record.time,
-            "time_offset": record.time_offset,
-            "coordinate": record.coordinate,
-            "air_tempature": record.air_tempature,
-            "humidity": record.humidity,
-            "wind_speed": record.wind_speed,
-            "wind_direction": record.wind_direction,
-            "precipitation": record.precipitation,
-            "haze": record.haze,
-            "water_tempature": record.water_tempature,
-            "notes": record.notes,
-        }
-    except SciRecord.DoesNotExist:
-        abort(404, f"Record with id {id} not found")
+        serializer = SciRecordSerializer(record)
+        return jsonify(serializer.data)  # Use Flask's jsonify
+    except ObjectDoesNotExist:
+        return make_response(jsonify({"error": "Record not found"}), 404)
 
-"""
-def update(id, record):
-    if id in SCI_RECORD:
-        # add updates to fields
-        SCI_RECORD[id]["timestamp"] = get_timestamp()
-        return SCI_RECORD[id]
-    else:
-        abort(
-            404,
-            f"Record with id {id} not found"
-        )
-"""
-def update(record_id, updates):
+# Function to create a new record
+def create():
+    # Get the request data
+    data = request.json
+    
+    # Check if an 'id' is provided in the request. If not, let Django auto-increment it.
+    id_provided = 'id' in data
+    
+    # Serialize the data and validate it
+    serializer = SciRecordSerializer(data=data)
+    
+    if serializer.is_valid():
+        try:
+            # If an 'id' is provided, check for its validity and uniqueness
+            if id_provided:
+                # Ensure the 'id' is not empty or invalid
+                if not isinstance(data['id'], int) or data['id'] <= 0:
+                    return make_response(
+                        jsonify({"error": "Invalid ID value. ID must be a positive integer."}),
+                        status.HTTP_400_BAD_REQUEST
+                    )
+            
+                # Explicitly check if the provided id already exists
+                if SciRecord.objects.filter(id=data['id']).exists():
+                    return make_response(
+                        jsonify({"error": "Record with this ID already exists."}),
+                        status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Manually set the provided 'id' in the serializer's validated data
+                serializer.validated_data['id'] = data['id']
+                    
+            
+            # Save the record (this handles both auto-incrementing and manual ID)
+            record = serializer.save()
+
+            # Return a successful response with the created record's data
+            return make_response(jsonify(serializer.data), status.HTTP_201_CREATED)
+
+        # Handle any database integrity errors (e.g., unique constraints, duplicate keys)
+        except IntegrityError as e:
+            return make_response(
+                jsonify({"error": "Integrity error: likely a duplicate ID or other issue."}),
+                status.HTTP_400_BAD_REQUEST
+            )
+
+    # If the data is invalid, return validation errors
+    return make_response(jsonify(serializer.errors), status.HTTP_400_BAD_REQUEST)
+
+# Function to update an existing record
+def update(id):
     try:
-        record = SciRecord.objects.get(pk=record_id)
-        for field, value in updates.items():
+        record = SciRecord.objects.get(pk=id)
+        for field, value in request.json.items():
             setattr(record, field, value)
         record.save()
-        return {
-            "id": record.id,
-            "date": record.date,
-            "time": record.time,
-            "time_offset": record.time_offset,
-            "coordinate": record.coordinate,
-            "air_tempature": record.air_tempature,
-            "humidity": record.humidity,
-            "wind_speed": record.wind_speed,
-            "wind_direction": record.wind_direction,
-            "precipitation": record.precipitation,
-            "haze": record.haze,
-            "water_tempature": record.water_tempature,
-            "notes": record.notes,
-        }
+        serializer = SciRecordSerializer(record)
+        return make_response(jsonify(serializer.data), 200)  # Flask compatible response
     except SciRecord.DoesNotExist:
-        abort(404, f"Record with id {record_id} not found")
+        return make_response(jsonify({"error": "Record not found"}), 404)
     except Exception as e:
-        abort(400, f"Error updating record: {str(e)}")
+        return make_response(jsonify({"error": str(e)}), 400)
 
-"""
+# Function to delete a record
 def delete(id):
-    if id in SCI_RECORD:
-        del SCI_RECORD[id]
-        return make_response(
-            f"{id} successfully deleted",
-            200
-        )
-    else:
-        abort(
-            404,
-            f"Record with id {id} not found"
-        )
-"""
-def delete(record_id):
     try:
-        record = SciRecord.objects.get(pk=record_id)
+        record = SciRecord.objects.get(pk=id)
         record.delete()
-        return make_response(f"Record {record_id} successfully deleted", 200)
+        return make_response(jsonify({"message": f"Record {id} successfully deleted"}), 200)
     except SciRecord.DoesNotExist:
-        abort(404, f"Record with id {record_id} not found")
+        return make_response(jsonify({"error": "Record not found"}), 404)
+
+def delete_all():
+    SciRecord.objects.all().delete()
+    return make_response(jsonify({"success": "Records cleared"}), 200)

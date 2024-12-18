@@ -2,7 +2,7 @@ from django.db import models
 
 # Create your models here.
 class SciRecord(models.Model):
-    id = models.AutoField(primary_key=True)  # Auto-increment primary key
+    id = models.AutoField(primary_key=True)
     date = models.DateField()
     time = models.TimeField()
     time_offset = models.IntegerField()
