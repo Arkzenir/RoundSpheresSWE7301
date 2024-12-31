@@ -7,6 +7,7 @@ from django_api.api.serializers import SciRecordSerializer
 from rest_framework import status
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
+from auth import token_required
 
 def get_timestamp():
     return datetime.now().strftime(("%Y-%m-%d %H:%M:%S"))

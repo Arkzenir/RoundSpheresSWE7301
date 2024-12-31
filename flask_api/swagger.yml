@@ -4,13 +4,33 @@ openapi: 3.0.0
 info:
   title: "Scientific Flask REST API"
   description: "An API for interacting with the scientific database"
-  version: "1.0.0"
+  version: "1.4.0"
 
 servers:
   - url: "/api"
 
 components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      x-bearerInfoFunc: auth.decode_token
+
   schemas:
+
+    UserCredentials:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+        - username
+        - password
+    
     Sci:
       type: "object"
       properties:
@@ -53,16 +73,58 @@ components:
         type: "integer"
 
 paths:
+
+  /auth/register:
+    post:
+      operationId: auth.register
+      tags:
+        - Authentication
+      summary: Register new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCredentials'
+      responses:
+        201:
+          description: User created successfully
+        400:
+          description: Invalid request
+
+  /auth/login:
+    post:
+      operationId: auth.login
+      tags:
+        - Authentication
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCredentials'
+      responses:
+        200:
+          description: Login successful
+        401:
+          description: Invalid credentials
+
+
   /sci_record:
     get:
       operationId: "sci_record.read_all"
       tags:
         - Sci
       summary: "Get all scientific data"
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: "Successfully read scientific record table"
     post:
+      security:
+        - bearerAuth: []
       operationId: "sci_record.create"
       tags:
         - Sci
@@ -79,6 +141,8 @@ paths:
         "201":
           description: "Successfully created record"
     delete:
+      security:
+        - bearerAuth: []
       operationId: "sci_record.delete_all"
       tags:
         - Sci
@@ -89,6 +153,8 @@ paths:
           description: "Successfully deleted all records"
   /sci_record/{id}:
     get:
+      security:
+        - bearerAuth: []
       operationId: "sci_record.read_one"
       tags:
         - Sci
@@ -99,6 +165,8 @@ paths:
         "200":
           description: "Successfully read record with id"
     put:
+      security:
+        - bearerAuth: []
       tags:
         - Sci
       operationId: "sci_record.update"
@@ -115,6 +183,8 @@ paths:
               x-body-name: "sci_record"
               $ref: "#/components/schemas/Sci"
     delete:
+      security:
+        - bearerAuth: []
       tags:
         - Sci
       operationId: "sci_record.delete"
