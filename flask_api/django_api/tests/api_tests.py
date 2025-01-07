@@ -1,19 +1,36 @@
 import pytest
-from flask import json
-from datetime import datetime, date, time
-from django.test import TestCase
+from django.test import TransactionTestCase
+from rest_framework.test import APIClient
+from django.urls import reverse
+from datetime import date, time
 from django.core.exceptions import ObjectDoesNotExist
-from app import app
+from django.core.management import call_command
 from django_api.api.models import SciRecord
 from django_api.api.serializers import SciRecordSerializer
 
-@pytest.mark.django_db
-class TestSciRecordAPI(TestCase):
+class BaseTestCase(TransactionTestCase):
+    """Base test class with database setup"""
+    
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        # Ensure migrations are applied
+        call_command('migrate')
+
+    def setUp(self):
+        super().setUp()
+        # Reset the database state
+        call_command('flush', '--no-input')
+        self.client = APIClient()
+
+@pytest.mark.django_db(transaction=True)
+class TestSciRecordAPI(BaseTestCase):
     """Test suite for the Scientific Records API"""
     
     def setUp(self):
         """Set up test client and sample data before each test"""
-        self.client = app.test_client()
+        super().setUp()
+        self.client = APIClient()
         self.sample_record = {
             "date": "2024-01-01",
             "time": "12:00:00",
@@ -44,6 +61,7 @@ class TestSciRecordAPI(TestCase):
             water_temperature=18.5,
             notes="Initial test record"
         )
+
     
     def tearDown(self):
         """Clean up after each test"""
@@ -53,21 +71,21 @@ class TestSciRecordAPI(TestCase):
         """Test creating a new record through the API"""
         # Test successful creation
         response = self.client.post(
-            '/api/sci_record',
-            data=json.dumps(self.sample_record),
-            content_type='application/json'
+            reverse('sci_record-list'),
+            data=self.sample_record,
+            format='json'
         )
         self.assertEqual(response.status_code, 201)
-        data = json.loads(response.data)
+        data = response.data
         self.assertIn('id', data)
         
         # Test duplicate ID prevention
         duplicate_record = self.sample_record.copy()
         duplicate_record['id'] = data['id']
         response = self.client.post(
-            '/api/sci_record',
-            data=json.dumps(duplicate_record),
-            content_type='application/json'
+            reverse('sci_record-list'),
+            data=duplicate_record,
+            format='json'
         )
         self.assertEqual(response.status_code, 400)
         
@@ -75,33 +93,50 @@ class TestSciRecordAPI(TestCase):
         invalid_record = self.sample_record.copy()
         invalid_record['air_temperature'] = "invalid"
         response = self.client.post(
-            '/api/sci_record',
-            data=json.dumps(invalid_record),
-            content_type='application/json'
+            reverse('sci_record-list'),
+            data=invalid_record,
+            format='json'
         )
         self.assertEqual(response.status_code, 400)
 
     def test_get_all_records(self):
         """Test retrieving all records"""
-        # Create additional test records
-        SciRecord.objects.create(**self.sample_record)
+        # Create additional test record
+        SciRecord.objects.create(
+            date=date(2024, 1, 2),
+            time=time(12, 0),
+            time_offset=-5,
+            coordinate=[40.7128, -74.0060],
+            air_temperature=22.5,
+            humidity=68.0,
+            wind_speed=12.2,
+            wind_direction=190.0,
+            precipitation=0.2,
+            haze=4.0,
+            water_temperature=19.5,
+            notes="Additional test record"
+        )
         
-        response = self.client.get('/api/sci_record')
+        response = self.client.get(reverse('sci_record-list'))
         self.assertEqual(response.status_code, 200)
-        data = json.loads(response.data)
+        data = response.data
         self.assertIsInstance(data, list)
         self.assertEqual(len(data), 2)  # Including the one from setUp
 
     def test_get_single_record(self):
         """Test retrieving a single record by ID"""
         # Test existing record
-        response = self.client.get(f'/api/sci_record/{self.test_record.id}')
+        response = self.client.get(
+            reverse('sci_record-detail', kwargs={'pk': self.test_record.id})
+        )
         self.assertEqual(response.status_code, 200)
-        data = json.loads(response.data)
+        data = response.data
         self.assertEqual(data['id'], self.test_record.id)
         
         # Test non-existent record
-        response = self.client.get('/api/sci_record/99999')
+        response = self.client.get(
+            reverse('sci_record-detail', kwargs={'pk': 99999})
+        )
         self.assertEqual(response.status_code, 404)
 
     def test_update_record(self):
@@ -112,49 +147,65 @@ class TestSciRecordAPI(TestCase):
         
         # Test successful update
         response = self.client.put(
-            f'/api/sci_record/{self.test_record.id}',
-            data=json.dumps(update_data),
-            content_type='application/json'
+            reverse('sci_record-detail', kwargs={'pk': self.test_record.id}),
+            data=update_data,
+            format='json'
         )
         self.assertEqual(response.status_code, 200)
-        data = json.loads(response.data)
+        data = response.data
         self.assertEqual(data['air_temperature'], 25.0)
         self.assertEqual(data['notes'], "Updated test record")
         
         # Test update of non-existent record
         response = self.client.put(
-            '/api/sci_record/99999',
-            data=json.dumps(update_data),
-            content_type='application/json'
+            reverse('sci_record-detail', kwargs={'pk': 99999}),
+            data=update_data,
+            format='json'
         )
         self.assertEqual(response.status_code, 404)
 
     def test_delete_record(self):
         """Test deleting a record"""
         # Test successful deletion
-        response = self.client.delete(f'/api/sci_record/{self.test_record.id}')
-        self.assertEqual(response.status_code, 200)
+        response = self.client.delete(
+            reverse('sci_record-detail', kwargs={'pk': self.test_record.id})
+        )
+        self.assertEqual(response.status_code, 204)  # DRF uses 204 for successful deletion
         
         # Verify record is deleted
         with self.assertRaises(ObjectDoesNotExist):
             SciRecord.objects.get(id=self.test_record.id)
         
         # Test deleting non-existent record
-        response = self.client.delete('/api/sci_record/99999')
+        response = self.client.delete(
+            reverse('sci_record-detail', kwargs={'pk': 99999})
+        )
         self.assertEqual(response.status_code, 404)
 
-    def test_delete_all_records(self):
+    def test_bulk_delete_records(self):
         """Test deleting all records"""
         # Create additional records
-        SciRecord.objects.create(**self.sample_record)
-        SciRecord.objects.create(**self.sample_record)
+        SciRecord.objects.create(
+            date=date(2024, 1, 2),
+            time=time(12, 0),
+            time_offset=-5,
+            coordinate=[40.7128, -74.0060],
+            air_temperature=22.5,
+            humidity=68.0,
+            wind_speed=12.2,
+            wind_direction=190.0,
+            precipitation=0.2,
+            haze=4.0,
+            water_temperature=19.5,
+            notes="Additional test record"
+        )
         
         # Verify we have multiple records
         self.assertTrue(SciRecord.objects.count() > 0)
         
         # Delete all records
-        response = self.client.delete('/api/sci_record')
-        self.assertEqual(response.status_code, 200)
+        response = self.client.delete(reverse('sci_record-list'))
+        self.assertEqual(response.status_code, 204)  # DRF uses 204 for successful deletion
         
         # Verify all records are deleted
         self.assertEqual(SciRecord.objects.count(), 0)
@@ -168,9 +219,9 @@ class TestSciRecordAPI(TestCase):
             # Missing other required fields
         }
         response = self.client.post(
-            '/api/sci_record',
-            data=json.dumps(invalid_record),
-            content_type='application/json'
+            reverse('sci_record-list'),
+            data=invalid_record,
+            format='json'
         )
         self.assertEqual(response.status_code, 400)
         
@@ -178,9 +229,9 @@ class TestSciRecordAPI(TestCase):
         invalid_record = self.sample_record.copy()
         invalid_record['coordinate'] = "not-an-array"
         response = self.client.post(
-            '/api/sci_record',
-            data=json.dumps(invalid_record),
-            content_type='application/json'
+            reverse('sci_record-list'),
+            data=invalid_record,
+            format='json'
         )
         self.assertEqual(response.status_code, 400)
         
@@ -188,13 +239,48 @@ class TestSciRecordAPI(TestCase):
         invalid_record = self.sample_record.copy()
         invalid_record['date'] = "01-01-2024"  # Wrong format
         response = self.client.post(
-            '/api/sci_record',
-            data=json.dumps(invalid_record),
-            content_type='application/json'
+            reverse('sci_record-list'),
+            data=invalid_record,
+            format='json'
         )
         self.assertEqual(response.status_code, 400)
 
-class TestSciRecordModel(TestCase):
+    def test_query_parameters(self):
+        """Test filtering and querying records"""
+        # Create records with different dates
+        SciRecord.objects.create(
+            date=date(2024, 1, 2),
+            time=time(12, 0),
+            time_offset=-5,
+            coordinate=[40.7128, -74.0060],
+            air_temperature=22.5,
+            humidity=68.0,
+            wind_speed=12.2,
+            wind_direction=190.0,
+            precipitation=0.2,
+            haze=4.0,
+            water_temperature=19.5,
+            notes="Record for date filtering"
+        )
+        
+        # Test date filtering
+        response = self.client.get(
+            f"{reverse('sci_record-list')}?date=2024-01-02"
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.data
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]['date'], '2024-01-02')
+        
+        # Test temperature range filtering
+        response = self.client.get(
+            f"{reverse('sci_record-list')}?min_temp=21&max_temp=23"
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.data
+        self.assertTrue(all(21 <= record['air_temperature'] <= 23 for record in data))
+
+class TestSciRecordModel(BaseTestCase):
     """Test suite for the SciRecord Django model"""
     
     def test_model_creation(self):
@@ -216,7 +302,26 @@ class TestSciRecordModel(TestCase):
         self.assertIsInstance(record, SciRecord)
         self.assertEqual(str(record), f"Record {record.id}")
 
-class TestSciRecordSerializer(TestCase):
+    def test_model_validation(self):
+        """Test model field validation"""
+        # Test invalid coordinate format
+        with self.assertRaises(ValueError):
+            SciRecord.objects.create(
+                date=date(2024, 1, 1),
+                time=time(12, 0),
+                time_offset=-5,
+                coordinate=[1, 2, 3],  # Invalid coordinate (should be [lat, lon])
+                air_temperature=20.5,
+                humidity=65.0,
+                wind_speed=10.2,
+                wind_direction=180.0,
+                precipitation=0.0,
+                haze=5.0,
+                water_temperature=18.5,
+                notes="Test invalid coordinate"
+            )
+
+class TestSciRecordSerializer(BaseTestCase):
     """Test suite for the SciRecord serializer"""
     
     def test_serialization(self):
@@ -266,6 +371,28 @@ class TestSciRecordSerializer(TestCase):
         record = serializer.save()
         self.assertIsInstance(record, SciRecord)
         self.assertEqual(record.air_temperature, 20.5)
+
+    def test_validation(self):
+        """Test serializer validation"""
+        # Test invalid coordinate format
+        invalid_data = {
+            "date": "2024-01-01",
+            "time": "12:00:00",
+            "time_offset": -5,
+            "coordinate": [1, 2, 3],  # Invalid coordinate
+            "air_temperature": 20.5,
+            "humidity": 65.0,
+            "wind_speed": 10.2,
+            "wind_direction": 180.0,
+            "precipitation": 0.0,
+            "haze": 5.0,
+            "water_temperature": 18.5,
+            "notes": "Test invalid data"
+        }
+        
+        serializer = SciRecordSerializer(data=invalid_data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('coordinate', serializer.errors)
 
 if __name__ == '__main__':
     pytest.main()
