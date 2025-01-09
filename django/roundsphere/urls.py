@@ -21,21 +21,42 @@ from django.conf import settings
 from django.conf.urls.static import static
 from app import views as app
 from app import formview as appview
+from app import server
+# from app.views import create_checkout_session
+
 
 urlpatterns = [
     # path('admin/', admin.site.urls),
     path('', app.home),
-    path('login/', app.login),
+    # path('login/', app.login),
     path('register/', app.register),
     path('registration/', appview.registration),
     path('adminrecords/', app.adminrecords),
+    path('adminproducts/', app.adminproducts),
     path('adminprofile/', app.adminprofile),
+    path('adminproductprofile/', app.adminproductprofile),
     path('adminupdate/', app.adminupdate),
     path('updaterecord/', appview.updaterecord),
     path('adminimg/', app.adminimg),
+    path('adminproductimg/', app.adminproductimg),
+    path('uploadimg/', appview.uploadimg),
     path('uploadproductimg/', appview.uploadproductimg),
     path('delete/', app.delete),
-   
+    # path('login/', app.login),
+    path('login/', appview.login_view,name='login'),
+    path('logout/', app.logout_view, name='logout'),
+    # path('checkout', server.loadCheckout, name='checkout'),
+    path('cart/', app.cart, name='cart'),
+    path('create-checkout-session/', appview.create_checkout_session, name='create_checkout_session'),
+    path('success', server.success, name='success'),
+    # path('loadCheckout', server.checkout, name='loadCheckout'),
+    path('', app.product_list, name='product_list'),
+    path('add-to-cart/', appview.add_to_cart, name='add_to_cart'),
+    # path('cart/', appview.cart_view, name='cart'),
+    # path('checkout/', appview.checkout, name='checkout'),
+    path('checkout_success/', app.checkout_success, name='checkout_success'),
+    path('cancel/', app.checkout_cancel, name='checkout_cancel'),
+    path('verify-email/<str:token>/', appview.verify_email, name='verify_email'),
 
 
 ]
@@ -43,4 +64,4 @@ if settings.DEBUG:
     urlpatterns+= static(settings.MEDIA_URL,document_root=settings.MEDIA_ROOT)
 
 
-urlpatterns += staticfiles_urlpatterns()
+urlpatterns += staticfiles_urlpatterns() 

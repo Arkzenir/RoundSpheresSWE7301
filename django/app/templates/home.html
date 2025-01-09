@@ -23,10 +23,27 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link active" href="../login">Login</a></li>
-                    <li class="nav-item"><a class="nav-link" href="../adminrecords">Records</a></li>
-                    <li class="nav-item"><a class="nav-link" href="../adminprofile">Products</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
+                    {% if request.session.first_name and request.session.last_name %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">
+                                Welcome, {{ request.session.first_name }} {{ request.session.last_name }}
+                            </a>
+                        </li>
+                        {% if request.session.is_admin %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="../adminrecords">Records</a>
+                            </li>
+                            <li class="nav-item"></li>
+                                <a class="nav-link" href="../adminproducts">Products</a>
+                            </li>
+                        {% endif %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="/logout/">Logout</a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item"><a class="nav-link" href="../login">Login</a></li>
+                        <!-- <li class="nav-item"><a class="nav-link" href="../adminrecords">Records</a></li> -->
+                    {% endif %}
                 </ul>
             </div>
         </div>
@@ -72,36 +89,173 @@
         </div>
     </section>
 
-    <!-- Products Section -->
+ 
     <section id="products" class="bg-light py-5">
         <div class="container text-center">
             <h2>Our Products</h2>
-            <div class="row mt-4">
-                <div class="col-md-4">
-                    <img src="{% static 'images/product1.jpg' %}" alt="Product 1" class="img-fluid rounded" width="300" height="200">
-                    <h4 class="mt-2">EcoSphere</h4>
-                    <p>Advanced water conservation ball for reservoirs.</p>
+            <form method="POST" action="{% url 'cart' %}">            
+                {% csrf_token %}
+                <div class="row mt-4">
+                    {% if products %}
+                        {% for product in products %}
+                        <div class="col-md-4 mb-4">
+                            <!-- Product Image -->
+                            {% if product.image %}
+                                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-fluid rounded" width="300" height="200">
+                            {% else %}
+                                <img src="{% static 'images/default-product.jpg' %}" alt="No Image" class="img-fluid rounded" width="300" height="200">
+                            {% endif %}
+    
+                            <!-- Product Details -->
+                            <h4 class="mt-2">{{ product.name }}</h4>
+                            <p>{{ product.description }}</p>
+                            <p><strong>Price:</strong> £{{ product.price }}</p>
+    
+                            <!-- Quantity Selector with Counter -->
+                            <div class="d-flex justify-content-center align-items-center mt-2">
+                                <label for="quantity_{{ product.id }}" class="me-2">Quantity:</label>
+    
+                                <!-- Decrease Button -->
+                                <button type="button" class="btn btn-outline-secondary" onclick="updateQuantity('{{ product.id }}', -1)">&#8722;</button>
+    
+                                <!-- Quantity Input -->
+                                <input 
+                                    type="text" 
+                                    name="quantities[{{ product.id }}]" 
+                                    id="quantity_{{ product.id }}" 
+                                    class="form-control mb-2 text-center" 
+                                    value="0" 
+                                    readonly 
+                                    style="width: 60px; display: inline-block; text-align: center;">
+    
+                                <!-- Increase Button -->
+                                <button type="button" class="btn btn-outline-secondary" onclick="updateQuantity('{{ product.id }}', 1)">&#43;</button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p>No products available.</p>
+                    {% endif %}
                 </div>
-                <div class="col-md-4">
-                    <img src="{% static 'images/product2.jpg' %}" alt="Product 2" class="img-fluid rounded" width="300" height="200">
-                    <h4 class="mt-2">SmartSphere</h4>
-                    <p>IoT-enabled device for data collection and analysis.</p>
-                </div>
-                <div class="col-md-4">
-                    <img src="{% static 'images/product3.jpg' %}" alt="Product 3" class="img-fluid rounded" width="300" height="200">
-                    <h4 class="mt-2">ShadeSphere</h4>
-                    <p>UV-resistant ball to reduce water evaporation.</p>
-                </div>
-            </div>
+    
+                <!-- Checkout Button -->
+                <!-- <a href="javascript:void(0)" class="btn btn-success mt-4" id="proceedToCheckout">Proceed to Checkout</a> -->
+                <button type="submit" class="btn btn-success mt-4">Proceed to Checkout</button>
+            </form>
         </div>
     </section>
-
+    <script>
+        function updateQuantity(productId, change) {
+            var quantityInput = document.getElementById('quantity_' + productId);
+            var currentValue = parseInt(quantityInput.value) || 0;
+            var newValue = Math.max(0, currentValue + change);  // Prevent negative values
+            quantityInput.value = newValue;
+        }
+    </script>
+    
+    <!-- <script>
+        // Function to update the quantity when the + / - buttons are clicked
+        function updateQuantity(productId, change) {
+            var quantityInput = document.getElementById('quantity_' + productId);
+            var currentQuantity = parseInt(quantityInput.value);
+            var newQuantity = currentQuantity + change;
+    
+            // Ensure quantity stays within stock limits
+            var maxQuantity = parseInt(quantityInput.getAttribute('max')) || 10;  // Default max stock if not provided
+            var minQuantity = 0; // Minimum quantity is 0 (can't be negative)
+    
+            if (newQuantity >= minQuantity && newQuantity <= maxQuantity) {
+                quantityInput.value = newQuantity;
+            }
+        }
+    
+        // Handle the checkout button click
+        document.getElementById('proceedToCheckout').addEventListener('click', async () => {
+            const form = document.querySelector('form');
+            const formData = new FormData(form);
+    
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'Accept': 'application/json',
+                    },
+                });
+    
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error("Response Error:", response.status, errorText);
+                    alert('Something went wrong. Please try again.');
+                    return;
+                }
+    
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const data = await response.json();
+                    if (data.url) {
+                        window.location.href = data.url;  // Redirect to the payment page
+                    } else {
+                        console.error("Data Error:", data);
+                        alert('Error: ' + (data.error || 'Unknown error'));
+                    }
+                } else {
+                    throw new Error('Invalid response format');
+                }
+            } catch (error) {
+                console.error('Request failed:', error);
+                alert('Something went wrong. Please try again.');
+            }
+        });
+    </script> -->
+    
+     
+    
+    <!-- <script>
+        document.querySelector('form').addEventListener('submit', async (event) => {
+            event.preventDefault(); // Prevent default form submission for debugging
+    
+            const form = event.target;
+            const formData = new FormData(form);
+    
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    },
+                });
+    
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error("Response Error:", response.status, errorText);
+                    alert('Something went wrong. Please try again.');
+                    return;
+                }
+    
+                const data = await response.json();
+                if (data.url) {
+                    window.location.href = data.url; // Redirect to Stripe payment page
+                } else {
+                    console.error("Data Error:", data);
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Request failed:', error);
+                alert('Something went wrong. Please try again.');
+            }
+        });
+    </script> -->
+    
+    
 
     <!-- Footer -->
     <footer id="contact" class="bg-dark text-white text-center py-4">
         <div class="container">
             <p>&copy; 2024 RoundSpheres. All Rights Reserved.</p>
-            <p>Contact us at: <a href="mailto:info@roundspheres.com" class="text-white">uthmanipadeola@gmail.com</a></p>
+            <p>Contact us at: <a href="mailto:info@roundspheres.com" class="text-white">engineering@roundspheres.co.uk</a></p>
         </div>
     </footer>
     
@@ -140,9 +294,6 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     </script>
 </body>
 </html>
-
-
-
 
 
 

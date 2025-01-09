@@ -76,6 +76,13 @@ WSGI_APPLICATION = 'roundsphere.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',  # Path to SQLite database file
+#     }
+# }
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
@@ -86,12 +93,13 @@ DATABASES = {
         'PORT':'3306',
     }
 }
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',  # Path to SQLite database file
-#     }
-# }
+
+# stripe Key
+# STRIPE_SECRET_KEY = 'sk_test_51QbfxPP8Daa6PDBIEerb1BDvnrhWKLJ7g040KjE7ONWRuvwnZdeaWENyangQsBiTh10rOraHhDgnMSirCFwRBtWz00GqHtbgXQ'
+# STRIPE_PUBLIC_KEY = 'pk_test_51QbfxPP8Daa6PDBIBqYplyH1P5nOCU5YzemmCOHVRSz4F0hQxOgB3HRzsY21K1vxse6Unl483qdhT1SRXZxJe4LF002J9FfDQN'
+
+STRIPE_SECRET_KEY = 'sk_test_51QUBXO03yFraxdaZMphoMCVTXicHHrSOYQktnkHyve8DvyLJHrSkKwJ8LNUlWgsqruPOAzGB5EXfpjbJYEOLR7iI00l647LZRf'
+STRIPE_PUBLISHABLE_KEY = 'pk_test_51QUBXO03yFraxdaZ7VMAIyrZGUBQdyMQP49vvT5k07aCSfrBNZIemMPg50IDEodHmWb72TyHJKZeL4hP6Y9RLnBK00ulfKG1EC'
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
@@ -141,3 +149,15 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'  # Or your email provider's SMTP server
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'saheedtijani0101@gmail.com'
+EMAIL_HOST_PASSWORD = 'lomu kgmo zknx rxvn'
+
+
+APPEND_SLASH = False

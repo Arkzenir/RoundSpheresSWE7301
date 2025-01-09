@@ -1,0 +1,97 @@
+
+
+<h1>Your Cart</h1>
+{% if cart %}
+<table>
+    <thead>
+        <tr>
+            <th>Product</th>
+            <th>Quantity</th>
+            <th>Price</th>
+            <th>Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in cart %}
+        <tr>
+            <td>{{ item.name }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>£{{ item.price }}</td>
+            <td>£{{ item.total_price }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<p><strong>Total:</strong> £{{ cart_total }}</p>
+
+<!-- Stripe Payment Button -->
+<form method="POST" action="{% url 'create_checkout_session' %}">
+    {% csrf_token %}
+    <input type="hidden" name="cart_total" value="{{ cart_total }}">
+    <button type="submit" class="btn btn-primary">Proceed to Payment</button>
+</form>
+
+{% else %}
+<p>Your cart is empty.</p>
+{% endif %}
+
+
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+    document.querySelector('form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        // Use the publishable key from settings
+        const stripe = Stripe('{{ "pk_test_51QUBXO03yFraxdaZ7VMAIyrZGUBQdyMQP49vvT5k07aCSfrBNZIemMPg50IDEodHmWb72TyHJKZeL4hP6Y9RLnBK00ulfKG1EC" }}');  // Use your publishable key here
+
+        const form = e.target;
+        const formData = new FormData(form);
+
+        try {
+            // Send a POST request to create the checkout session
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: formData,
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                alert(data.error);  // Display error
+            } else {
+                const { sessionId } = data;
+                const result = await stripe.redirectToCheckout({ sessionId });
+
+                if (result.error) {
+                    alert(result.error.message);
+                }
+            }
+        } catch (error) {
+            console.error("Error during payment process:", error);
+            alert("Something went wrong. Please try again.");
+        }
+    });
+</script>
+
+
+<!-- <script src="https://js.stripe.com/v3/"></script>
+<script>
+    document.querySelector('form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const stripe = Stripe('{{ stripe_publishable_key }}');  // Add your publishable key here
+        const form = e.target;
+        const formData = new FormData(form);
+
+        const response = await fetch(form.action, {
+            method: 'POST',
+            body: formData,
+        });
+        const data = await response.json();
+
+        if (data.error) {
+            alert(data.error);
+        } else {
+            stripe.redirectToCheckout({ sessionId: data.sessionId });
+        }
+    });
+</script> -->
