@@ -168,7 +168,7 @@ def cart(request):
 
 
 def checkout(request):
-    print("seyi")
+    # print("seyi")
     data = request.GET
     # id = data['id']
     message = data.get('message', '')

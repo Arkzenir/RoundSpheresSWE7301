@@ -15,6 +15,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 
 
+# Stripe API key
 
 
 
@@ -250,80 +251,128 @@ def login_view(request):
     return render(request, "login.html")  # Render the login form
 
 
-# Set the Stripe secret key
-
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
+
+@csrf_exempt
 def create_checkout_session(request):
     if request.method == "POST":
-        # Get the cart total and convert to cents
-        cart_total = request.POST.get('cart_total', 0.00)
-        cart_total = float(cart_total) * 100  # Convert to cents for Stripe
-
-        # Debugging: Print cart_total
-        print(f"Cart Total: {cart_total}")
-
-        # Initialize an empty list for line items
-        line_items = []
-
-        # Debugging: Check if cart_items are being passed
-        cart_items = request.POST.getlist('cart_items')
-        print(f"Cart Items: {cart_items}")
-
-        # If you have actual cart items, loop through them to construct the line items
-        for item in cart_items:
-            try:
-                # Debugging: Check individual item data
-                print(f"Processing item: {item}")
-                
-                # Split the cart item into name, price, and quantity
-                product_name, product_price, quantity = item.split('|')
-                product_price = float(product_price) * 100  # Convert to cents
-                quantity = int(quantity)
-
-                # Add line item to the list
-                line_items.append({
-                    'price_data': {
-                        'currency': 'gbp',
-                        'product_data': {
-                            'name': product_name,
-                        },
-                        'unit_amount': int(product_price),  # price in cents
-                    },
-                    'quantity': quantity,
-                })
-
-                # Debugging: Print the line item being added
-                print(f"Line item added: {line_items[-1]}")
-
-            except Exception as e:
-                print(f"Error processing item: {e}")
-        
-        # Debugging: Print all line items
-        print(f"Line items: {line_items}")
-
-        if not line_items:
-            return JsonResponse({'error': 'No valid line items found.'}, status=400)
-
         try:
-            # Create the Stripe Checkout session with the line_items
+            # Extract cart items from the POST request
+            cart_items = request.POST.getlist('cart_items[]')  # Use the "[]" syntax if sending an array
+            if not cart_items:
+                return JsonResponse({'error': 'No items in the cart'}, status=400)
+
+            # Prepare line items for Stripe Checkout
+            line_items = []
+            for item in cart_items:
+                try:
+                    # Each item is in the format "name|price|quantity"
+                    name, price, quantity = item.split('|')
+                    line_items.append({
+                        'price_data': {
+                            'currency': 'gbp',
+                            'product_data': {
+                                'name': name,
+                            },
+                            'unit_amount': int(float(price) * 100),  # Stripe expects price in cents
+                        },
+                        'quantity': int(quantity),
+                    })
+                except Exception as e:
+                    return JsonResponse({'error': f'Invalid item format: {item}. {str(e)}'}, status=400)
+
+            # Create a Stripe Checkout session
             session = stripe.checkout.Session.create(
-                payment_method_types=['card'],
-                line_items=line_items,  # Pass the line_items list
+                payment_method_types=['card'],  # Enable card payments
+                line_items=line_items,
                 mode='payment',
-                success_url=request.build_absolute_uri('/checkout_success/'),
-                cancel_url=request.build_absolute_uri('/cart/'),
+                success_url=request.build_absolute_uri('/checkout_success/'),  # Redirect after success
+                cancel_url=request.build_absolute_uri('/cart/'),  # Redirect after cancel
             )
 
-            # Return the session ID in response
+            # Return the session ID
             return JsonResponse({'sessionId': session.id})
-
         except Exception as e:
-            # Debugging: Log any errors when creating session
-            print(f"Error creating Stripe session: {e}")
-            return JsonResponse({'error': str(e)})
+            return JsonResponse({'error': str(e)}, status=500)
 
-    return JsonResponse({'error': 'Invalid request method.'}, status=400)
+    return JsonResponse({'error': 'Invalid request method.'}, status=405)
+
+
+# Set the Stripe secret key
+
+# stripe.api_key = settings.STRIPE_SECRET_KEY
+
+# def create_checkout_session(request):
+#     if request.method == "POST":
+#         # Get the cart total and convert to cents
+#         cart_total = request.POST.get('cart_total', 0.00)
+#         cart_total = float(cart_total) * 100  # Convert to cents for Stripe
+
+#         # Debugging: Print cart_total
+#         print(f"Cart Total: {cart_total}")
+
+#         # Initialize an empty list for line items
+#         line_items = []
+
+#         # Debugging: Check if cart_items are being passed
+#         cart_items = request.POST.getlist('cart_items')
+#         print(f"Cart Items: {cart_items}")
+
+#         # If you have actual cart items, loop through them to construct the line items
+#         for item in cart_items:
+#             try:
+#                 # Debugging: Check individual item data
+#                 print(f"Processing item: {item}")
+                
+#                 # Split the cart item into name, price, and quantity
+#                 product_name, product_price, quantity = item.split('|')
+#                 product_price = float(product_price) * 100  # Convert to cents
+#                 quantity = int(quantity)
+
+#                 # Add line item to the list
+#                 line_items.append({
+#                     'price_data': {
+#                         'currency': 'gbp',
+#                         'product_data': {
+#                             'name': product_name,
+#                         },
+#                         'unit_amount': int(product_price),  # price in cents
+#                     },
+#                     'quantity': quantity,
+#                 })
+
+#                 # Debugging: Print the line item being added
+#                 print(f"Line item added: {line_items[-1]}")
+
+#             except Exception as e:
+#                 print(f"Error processing item: {e}")
+        
+#         # Debugging: Print all line items
+#         print(f"Line items: {line_items}")
+
+#         if not line_items:
+#             return JsonResponse({'error': 'No valid line items found.'}, status=400)
+
+#         try:
+#             # Create the Stripe Checkout session with the line_items
+#             session = stripe.checkout.Session.create(
+#                 payment_method_types=['card'],
+#                 line_items=line_items,  # Pass the line_items list
+#                 mode='payment',
+#                 success_url=request.build_absolute_uri('/checkout_success/'),
+#                 cancel_url=request.build_absolute_uri('/cart/'),
+#             )
+
+#             # Return the session ID in response
+#             return JsonResponse({'sessionId': session.id})
+
+#         except Exception as e:
+#             # Debugging: Log any errors when creating session
+#             print(f"Error creating Stripe session: {e}")
+#             return JsonResponse({'error': str(e)})
+
+#     return JsonResponse({'error': 'Invalid request method.'}, status=400)
 
 
 
