@@ -36,7 +36,7 @@
                     <th scope="col">Last_name</th>
                     <th scope="col">Email_address</th>
                     <th scope="col">User_name</th>
-                    <!-- <th scope="col">Password</th> -->
+                    <th scope="col">Admin status</th>
                     <th scope="col">Action</th>
                   </tr>
                 </thead>
@@ -48,7 +48,7 @@
                     <td>{{record.Last_name}}</td>
                     <td>{{record.Email_address}}</td>
                     <td>{{record.User_name}}</td>
-                    <!-- <td>{{record.Password}}</td> -->
+                    <td>{{record.is_admin}}</td>
                     <td><a href="/adminprofile/?id={{ record.id }}" class="text-decoration-none">View</a></td>
                   </tr>
                   {% endfor %}

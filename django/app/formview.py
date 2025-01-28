@@ -15,10 +15,6 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 
 
-# Stripe API key
-
-
-
 
 def registration(request):
     try:
